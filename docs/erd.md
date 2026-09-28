@@ -37,7 +37,7 @@ Payment의 회원 ID는 연결된 Subscription의 회원 ID와 같아야 하며 
 1. 실패 결제는 FK 필수 조건을 지키기 위해 저장하지 않습니다. payment_attempts 도입은 공동 검토 대상입니다.
 2. 이용 기간은 [startDate, endDate), 한국 시간 자정 기준입니다.
 3. 월말·윤년은 LocalDate.plusMonths/plusYears를 사용합니다.
-4. 전액 환불 승인 시 미래 endDate를 오늘로 단축하고 EXPIRED로 변경합니다.
+4. 일할 환불 승인 시 미래 endDate를 오늘로 단축하고 EXPIRED로 변경합니다.
 5. 반려 후 재요청은 원본 결제당 환불 1회 제약으로 금지합니다.
 6. JPA 기본 validate: 검토된 SQL을 먼저 적용합니다. update만 사용하면 FK/CHECK 생성은 보장되지 않습니다.
 7. Member/Product Entity를 복제하지 않고 ID 참조 + 명시적 FK를 사용합니다.

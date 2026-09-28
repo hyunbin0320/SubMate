@@ -9,7 +9,7 @@
 - ACTIVE 구독을 해지하면 CANCELLED, 종료 시각까지 이용 가능하다.
 - 종료일에 ACTIVE/CANCELLED는 EXPIRED가 된다.
 - 만료 후 재구독은 새로운 Subscription을 생성한다.
-- 결제당 한 번 전액 환불을 요청한다.
+- 결제당 한 번 일할 환불을 요청한다.
 
 ## 관리자
 

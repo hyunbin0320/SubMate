@@ -59,7 +59,7 @@ export default function RefundsPage({ admin = false }) {
           </h2>
           <p>
             {decision.value === 'APPROVE'
-              ? '전액 환불 처리와 동시에 구독 이용이 종료됩니다.'
+              ? '요청 시 확정된 금액으로 환불 처리하며 구독 이용이 즉시 종료됩니다.'
               : '환불 요청을 반려합니다. 기존 결제와 구독은 유지됩니다.'}
           </p>
           <div className="actions">
@@ -99,7 +99,18 @@ export default function RefundsPage({ admin = false }) {
                       <span className="muted">결제 #{item.paymentId}</span>
                     </td>
                     <td>{dateTime(item.createdAt)}</td>
-                    <td className="amount">{money(item.amount)}</td>
+                    <td className="amount">
+                      {money(item.amount)}
+                      {item.totalDays != null && (
+                        <>
+                          <br />
+                          <span className="muted">
+                            남은 {item.remainingDays}일 / 전체 {item.totalDays}
+                            일
+                          </span>
+                        </>
+                      )}
+                    </td>
                     <td className="reason">{item.reason}</td>
                     <td>
                       <StatusBadge status={item.status} />
