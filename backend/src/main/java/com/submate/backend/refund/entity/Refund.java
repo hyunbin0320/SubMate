@@ -19,10 +19,14 @@ public class Refund {
     @Column(name = "refunded_at") private LocalDateTime refundedAt;
     @Column(name = "created_at", nullable = false) private LocalDateTime createdAt;
     @Version private long version;
+    // Nullable for historical requests created before prorated refunds were introduced.
+    @Column(name = "total_days") private Long totalDays;
+    @Column(name = "remaining_days") private Long remainingDays;
 
-    public Refund(Long paymentId, BigDecimal amount, String reason, LocalDateTime now) {
+    public Refund(Long paymentId, BigDecimal amount, String reason, LocalDateTime now, long totalDays, long remainingDays) {
         this.paymentId = paymentId; this.amount = amount; this.reason = reason;
         this.status = RefundStatus.REQUESTED; this.createdAt = now;
+        this.totalDays = totalDays; this.remainingDays = remainingDays;
     }
     public void complete(LocalDateTime now) { status = RefundStatus.COMPLETED; refundedAt = now; }
     public void reject() { status = RefundStatus.REJECTED; }

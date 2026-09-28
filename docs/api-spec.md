@@ -23,7 +23,7 @@
 | GET | /subscriptions/{id} | 본인 | 구독 상세 |
 | PATCH | /subscriptions/{id}/cancel | 본인 | 해지 |
 | GET | /payments | 로그인 | 본인 결제 목록 |
-| POST | /refunds | 본인 | 전액 환불 요청 |
+| POST | /refunds | 본인 | 일할 환불 요청 |
 | GET | /refunds | 로그인 | 본인 환불 목록 |
 | GET | /admin/subscriptions | 관리자 | 전체 구독 |
 | GET | /admin/subscriptions/{id} | 관리자 | 구독 상세 |
@@ -109,7 +109,7 @@ POST /refunds → 201
 {"paymentId":1,"reason":"이용 계획 변경"}
 ```
 
-reason은 공백 제외 필수, 최대 255자. 금액은 서버가 결제 전액으로 결정합니다.
+reason은 공백 제외 필수, 최대 255자. 금액은 서버가 결제금액 × 요청일 기준 남은 일수 ÷ 전체 일수로 계산하고 원 미만을 버립니다.
 COMPLETED 결제만 요청할 수 있으며 이미 환불 행이 있으면 409입니다.
 
 ```json
@@ -120,11 +120,20 @@ COMPLETED 결제만 요청할 수 있으며 이미 환불 행이 있으면 409�
   "reason": "이용 계획 변경",
   "status": "REQUESTED",
   "refundedAt": null,
-  "createdAt": "2026-09-15T18:10:00"
+  "createdAt": "2026-09-15T18:10:00",
+  "totalDays": 30,
+  "remainingDays": 30
 }
 ```
 
 PATCH /admin/refunds/{id} → 200
+
+한국 날짜 기준이며 종료일은 제외하고 요청 당일은 남은 일수에 포함합니다.
+예: 12,900원 × 18일 / 28일 = 8,292원. 요청 시 금액과 일수를 저장하여 승인일이 바뀌어도 금액을 유지합니다.
+대기 중 이용은 유지되며 승인 시 즉시 종료됩니다. 정책 적용 전 환불의 일수 필드는 null입니다.
+
+기존 MySQL DB에는 배포 전에 `backend/src/main/resources/db/migrations/20260923-prorated-refunds.sql`을 한 번 적용합니다.
+신규 DB는 최신 `subscription-schema.sql`을 사용합니다. 기존 환불 금액은 변경하지 않습니다.
 
 ```json
 {"decision":"APPROVE"}
@@ -136,7 +145,7 @@ PATCH /admin/refunds/{id} → 200
 - 승인: Refund=COMPLETED, Payment=REFUNDED, 구독 이용 즉시 종료(EXPIRED)
 - 반려: Refund=REJECTED, 기존 결제·구독 유지
 - 결제당 환불 요청 1회, 반려 후 재요청 불가
-- 기간이 끝난 결제도 관리자 판단으로 전액 승인 가능
+- 기간이 끝난 구독은 신규 환불 요청 불가 (409)
 - 승인 응답은 위 refund 객체와 같고 refundedAt 기록
 
 ## Frontend 연결

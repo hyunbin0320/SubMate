@@ -10,6 +10,9 @@ import com.submate.backend.subscription.repository.SubscriptionRepository;
 import com.submate.backend.subscription.service.SubscriptionService;
 import com.submate.backend.subscription.support.DomainException;
 import java.time.*;
+import java.time.temporal.ChronoUnit;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,8 +34,19 @@ public class RefundService {
         if (!payment.getMemberId().equals(memberId)) throw DomainException.notFound("결제");
         if (payment.getStatus() != PaymentStatus.COMPLETED) throw DomainException.conflict("완료된 결제만 환불 요청할 수 있습니다.");
         if (refunds.existsByPaymentId(payment.getPaymentId())) throw DomainException.conflict("이미 환불 요청한 결제입니다.");
-        Refund refund = refunds.saveAndFlush(new Refund(payment.getPaymentId(), payment.getAmount(),
-                request.reason().strip(), LocalDateTime.now(clock)));
+        var subscription = subscriptions.findLockedById(payment.getSubscriptionId())
+                .orElseThrow(() -> DomainException.notFound("구독"));
+        LocalDate today = LocalDate.now(clock);
+        long totalDays = ChronoUnit.DAYS.between(subscription.getStartDate(), subscription.getEndDate());
+        long remainingDays = Math.min(totalDays, ChronoUnit.DAYS.between(today, subscription.getEndDate()));
+        if (totalDays <= 0 || remainingDays <= 0) {
+            throw DomainException.conflict("남은 이용 기간이 없어 환불할 수 없습니다.");
+        }
+        BigDecimal amount = payment.getAmount().multiply(BigDecimal.valueOf(remainingDays))
+                .divide(BigDecimal.valueOf(totalDays), 0, RoundingMode.DOWN);
+        if (amount.signum() <= 0) throw DomainException.conflict("계산된 환불 금액이 0원입니다.");
+        Refund refund = refunds.saveAndFlush(new Refund(payment.getPaymentId(), amount,
+                request.reason().strip(), LocalDateTime.now(clock), totalDays, remainingDays));
         return RefundResponse.from(refund);
     }
 
@@ -49,7 +63,7 @@ public class RefundService {
             LocalDateTime now = LocalDateTime.now(clock);
             refund.complete(now);
             payment.markRefunded();
-            // 이번 단계는 전액 환불만 지원한다. 승인 시 서비스 이용도 즉시 종료한다.
+            // 요청일에 확정한 일할 환불액을 유지하고 승인 시 이용을 종료한다.
             subscription.endForRefund(LocalDate.now(clock), now);
         }
         return RefundResponse.from(refund);

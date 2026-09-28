@@ -40,6 +40,8 @@ CREATE TABLE refunds (
     refund_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     payment_id BIGINT NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
+    total_days BIGINT NULL,
+    remaining_days BIGINT NULL,
     reason VARCHAR(255) NOT NULL,
     status VARCHAR(20) NOT NULL,
     refunded_at TIMESTAMP NULL,

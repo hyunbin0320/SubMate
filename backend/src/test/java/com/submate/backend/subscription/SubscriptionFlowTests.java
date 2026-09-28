@@ -246,7 +246,7 @@ class SubscriptionFlowTests {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CANCELLED"));
     }
 
-    @Test void approvingFullRefundUpdatesAllThreeRecordsAndStopsAccess() throws Exception {
+    @Test void approvingSameDayRefundUpdatesAllThreeRecordsAndStopsAccess() throws Exception {
         var result = checkout("refund-flow").andExpect(status().isCreated()).andReturn();
         long subscriptionId = number(result, "$.subscription.subscriptionId");
         long paymentId = number(result, "$.payment.paymentId");
@@ -262,6 +262,38 @@ class SubscriptionFlowTests {
         decide(refundId, "APPROVE").andExpect(status().isConflict());
         checkout("refund-flow").andExpect(status().isOk()).andExpect(jsonPath("$.payment.status").value("REFUNDED"));
         checkout("repurchase").andExpect(status().isCreated());
+    }
+
+    @Test void proratedRefundFloorsWonAndFreezesAmountOnRequestDate() throws Exception {
+        var result = checkout("prorated").andExpect(status().isCreated()).andReturn();
+        long paymentId = number(result, "$.payment.paymentId");
+        clock.setDate("2026-02-10");
+        long refundId = refundRequest(paymentId);
+        mvc.perform(get("/api/refunds").with(user("user@submate.test")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].amount").value(8292))
+                .andExpect(jsonPath("$.content[0].totalDays").value(28))
+                .andExpect(jsonPath("$.content[0].remainingDays").value(18));
+        clock.setDate("2026-02-12");
+        decide(refundId, "APPROVE").andExpect(status().isOk()).andExpect(jsonPath("$.amount").value(8292));
+    }
+
+    @Test void expiredSubscriptionCannotRequestRefundEvenBeforeSchedulerRuns() throws Exception {
+        var result = checkout("expired-refund").andExpect(status().isCreated()).andReturn();
+        long paymentId = number(result, "$.payment.paymentId");
+        clock.setDate("2026-02-28");
+        mvc.perform(post("/api/refunds").with(user("user@submate.test"))
+                .contentType("application/json").content("{\"paymentId\":" + paymentId + ",\"reason\":\"기간 종료\"}"))
+                .andExpect(status().isConflict());
+        assertThat(refundRepository.count()).isZero();
+    }
+
+    @Test void cancelledSubscriptionCanRefundRemainingDays() throws Exception {
+        var result = checkout("cancel-refund").andExpect(status().isCreated()).andReturn();
+        subscriptions.cancel(1L, number(result, "$.subscription.subscriptionId"));
+        clock.setDate("2026-02-27");
+        long id = refundRequest(number(result, "$.payment.paymentId"));
+        decide(id, "REJECT").andExpect(status().isOk()).andExpect(jsonPath("$.amount").value(460))
+                .andExpect(jsonPath("$.remainingDays").value(1));
     }
 
     @Test void rejectionKeepsPaymentAndSubscriptionAndCannotRequestAgain() throws Exception {

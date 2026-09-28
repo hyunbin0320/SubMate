@@ -132,8 +132,9 @@ export default function PaymentsPage({ admin = false }) {
         <form className="panel refund-form" onSubmit={handleRefund}>
           <h2>결제 #{selected} 환불 요청</h2>
           <p className="muted">
-            관리자 승인 시 전액 환불되며 구독 이용이 즉시 종료됩니다. 결제당 한
-            번만 요청할 수 있습니다.
+            요청일 기준 남은 일수에 비례해 환불하며 원 미만은 버립니다. 요청
+            당일은 남은 일수에 포함됩니다. 관리자 승인 시 이용이 종료됩니다.
+            결제당 한 번만 요청할 수 있습니다.
           </p>
           <label>
             환불 사유
