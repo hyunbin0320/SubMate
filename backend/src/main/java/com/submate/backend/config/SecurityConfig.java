@@ -44,12 +44,20 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/auth/signup",
-                                "/api/auth/login"
-                        ).permitAll()
-                        .anyRequest().authenticated()
-                )
+        .requestMatchers(
+                "/api/auth/signup",
+                "/api/auth/login"
+        ).permitAll()
+
+        .requestMatchers(
+                org.springframework.http.HttpMethod.GET,
+                "/api/categories",
+                "/api/products",
+                "/api/products/**"
+        ).permitAll()
+
+        .anyRequest().authenticated()
+)
 
                 .exceptionHandling(exception -> exception
 

@@ -24,9 +24,25 @@ public class Member {
     @Column(nullable = false, length = 20)
     private String role;
 
+    @Column(nullable = false, length = 20)
+    private String status;
+
     public Member(String email, String password) {
         this.email = email;
         this.password = password;
         this.role = "USER";
+        this.status = "ACTIVE";
+    }
+
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
+    public void changeEmail(String email) {
+        this.email = email;
+    }
+
+    public void withdraw() {
+        this.status = "WITHDRAWN";
     }
 }

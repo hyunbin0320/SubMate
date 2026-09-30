@@ -6,6 +6,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.submate.backend.member.dto.ChangePasswordRequest;
+import org.springframework.security.core.Authentication;
 
 import java.util.Map;
 
@@ -58,4 +60,20 @@ public ResponseEntity<Map<String, Object>> getMyInfo(
             )
         );
     }
+    @PatchMapping("/me/password")
+public ResponseEntity<Map<String, String>> changePassword(
+        Authentication authentication,
+        @Valid @RequestBody ChangePasswordRequest request
+) {
+    memberService.changePassword(
+            authentication.getName(),
+            request
+    );
+
+    return ResponseEntity.ok(
+            Map.of(
+                    "message", "비밀번호가 변경되었습니다."
+            )
+    );
+  }
 }
